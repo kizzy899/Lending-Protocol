@@ -1,0 +1,20 @@
+{
+  "name": "lending-protocol",
+  "version": "1.0.0",
+  "description": "模拟 Aave / Compound 的去中心化借贷协议",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "ethers": "^5.8.0",
+    "hardhat": "^2.6.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
+}
