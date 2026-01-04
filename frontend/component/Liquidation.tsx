@@ -43,6 +43,10 @@ export function Liquidation() {
     query: { enabled: !!borrowerAddress },
   });
 
+  // 处理健康度数据
+  const maxUint256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+  const healthFactorValue = healthFactor as bigint | undefined;
+
   // 读取借款人的借款
   const { data: borrowerDebt } = useReadContract({
     address: lendingPoolAddress,
@@ -51,6 +55,9 @@ export function Liquidation() {
     args: borrowerAddress ? [borrowerAddress, repayTokenAddress] : undefined,
     query: { enabled: !!borrowerAddress },
   });
+
+  // 处理借款人债务数据
+  const borrowerDebtValue = borrowerDebt as bigint | undefined;
 
   // 写入操作
   const { writeContract: approveToken, data: approveHash } = useWriteContract();
@@ -95,8 +102,8 @@ export function Liquidation() {
     ? parseUnits(amount, repayTokenInfo.decimals) > (allowance as bigint)
     : false;
 
-  const isEligible = healthFactor && healthFactor !== BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-    ? Number(healthFactor) < 10000
+  const isEligible = healthFactorValue && healthFactorValue !== maxUint256
+    ? Number(healthFactorValue) < 10000
     : false;
 
   const maxAmount = balance ? formatUnits(balance as bigint, repayTokenInfo.decimals) : '0';
@@ -126,16 +133,16 @@ export function Liquidation() {
       </div>
 
       {/* 健康度显示 */}
-      {borrowerAddress && healthFactor && (
+      {borrowerAddress && healthFactorValue && (
         <div className="mb-4 p-3 bg-muted rounded-lg">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">健康度</span>
             <span className={`text-lg font-bold ${
-              Number(healthFactor) < 10000 ? 'text-red-500' : 'text-green-500'
+              Number(healthFactorValue) < 10000 ? 'text-red-500' : 'text-green-500'
             }`}>
-              {healthFactor === BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
+              {healthFactorValue === maxUint256
                 ? '∞'
-                : (Number(healthFactor) / 100).toFixed(2) + '%'
+                : (Number(healthFactorValue) / 100).toFixed(2) + '%'
               }
             </span>
           </div>
@@ -181,11 +188,11 @@ export function Liquidation() {
             {balance ? formatUnits(balance as bigint, repayTokenInfo.decimals) : '0'} {repayTokenInfo.symbol}
           </span>
         </div>
-        {borrowerDebt && (
+        {borrowerDebtValue && (
           <div className="flex justify-between text-sm mt-2">
             <span className="text-muted-foreground">借款人债务</span>
             <span className="font-medium">
-              {formatUnits(borrowerDebt as bigint, repayTokenInfo.decimals)} {repayTokenInfo.symbol}
+              {formatUnits(borrowerDebtValue, repayTokenInfo.decimals)} {repayTokenInfo.symbol}
             </span>
           </div>
         )}
