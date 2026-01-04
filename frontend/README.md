@@ -1,35 +1,43 @@
-前端说明（Frontend）
+# 借贷协议前端
 
-这个简单前端用于与本地部署的 LendingPool 合约交互（演示与调试）。它使用 Ethers.js，并期望你在本地运行 Hardhat 节点并部署合约。
+这是一个基于 Next.js + wagmi + ConnectKit 的去中心化借贷协议前端应用。
 
-主要功能：
-- 连接 MetaMask 钱包
-- 输入 LendingPool 合约地址和 TokenMock 地址，加载市场与用户数据
-- Deposit / Withdraw / Borrow / Repay 操作
-- Approve 按钮与自动 approve 流程（在 deposit / repay 前会检查 allowance 并在必要时自动发起 approve）
+## 功能特性
 
-快速上手
+- ✅ **存款/取款**：存入代币作为抵押品或取出已存入的代币
+- ✅ **借款/还款**：使用抵押品借出代币或偿还借款
+- ✅ **清算**：清算健康度低于 100% 的借款人，获得清算奖励
+- ✅ **资产查看**：实时查看抵押品、借款和健康度
+- ✅ **钱包连接**：支持 MetaMask、WalletConnect 等钱包
 
-1. 编译合约：
-   npm install
-   npx hardhat compile
+## 项目结构
 
-2. 启动本地节点：
-   npx hardhat node
+```
+frontend/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # 主页面
+│   ├── layout.tsx         # 布局
+│   └── provider.tsx       # Wagmi Provider
+├── component/             # React 组件
+│   ├── UserAssets.tsx     # 用户资产显示
+│   ├── DepositWithdraw.tsx # 存款/取款
+│   ├── BorrowRepay.tsx    # 借款/还款
+│   └── Liquidation.tsx    # 清算
+├── config/                 # 配置文件
+│   └── index.ts           # 合约地址和 ABI（支持多网络）
+├── abi/                    # 合约 ABI
+│   ├── LendingPool.json
+│   ├── CollaterManager.json
+│   └── PriceOracleMock.json
+└── public/                 # 静态文件
+    └── frontend-config.json # 部署配置
+```
 
-3. 部署合约到本地网络：
-   npx hardhat run scripts/deploy.js --network localhost
+## 技术栈
 
-脚本会输出合约地址（TokenMock、InterestRateModel、CollateralManager、LendingPool）。把 LendingPool 与 TokenMock 地址填到页面输入框中。
-
-4. 运行前端：
-   推荐使用一个静态服务器来打开 frontend 文件夹，例如使用 serve：
-   npx serve frontend
-
-5. 在 MetaMask 中选择 Localhost 8545，连接钱包，输入合约地址，点击“加载市场 & 用户数据”。
-
-注意事项
-- Deposit / Repay 操作会使用 ERC20 的 transferFrom，因此在执行这些操作前需要 approve。前端提供了手动 Approve 按钮，也会在必要时自动发起 approve（自动 approve 默认使用 MaxUint256，或使用你在 approve 输入框里填写的金额）。
-- 如果需要更复杂的前端（多代币支持、Allowance 显示等），我可以继续扩展。
-
-Enjoy!
+- **Next.js 15** - React 框架
+- **wagmi** - React Hooks for Ethereum
+- **ConnectKit** - 钱包连接 UI
+- **viem** - 类型安全的 Ethereum 库
+- **Tailwind CSS** - 样式框架
+- **TypeScript** - 类型安全

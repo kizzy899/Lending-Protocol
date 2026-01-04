@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity ^0.8.19;
 
-import "../interfaces/IInterestRateModel.sol";
+import "./interfaces/IInterestRateModel.sol";
 
 /// @title 简单线性利率模型
 /// @dev 所有利率都使用1e18定点数表示。资金利用率范围是0到1e18

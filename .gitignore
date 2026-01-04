@@ -1,7 +1,15 @@
 node_modules
 
-node_modules
 
 #Hardhat files
 cache
 artifacts
+frontend-config.json
+deployed-addresses.json
+package-lock.json
+.env
+
+#frontend files
+frontend/node_modules
+frontend/package-lock.json
+frontend/.env
