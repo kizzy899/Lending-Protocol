@@ -1,17 +1,3 @@
-// 🚀 前端演示基础数据部署脚本
-// 这个脚本会：
-// 1. 部署所有合约
-// 2. 配置基础参数
-// 3. 创建初始状态（流动性、用户余额等）
-// 4. 生成前端配置文件
-// 使用方式：
-//   - 使用 Hardhat 内置网络（推荐）：
-//     npx hardhat run scripts/deploy-frontend.js
-//   - 使用本地节点：
-//     npx hardhat run scripts/deploy-frontend.js --network localhost
-//   - 指定自定义账户（通过环境变量）：
-//     USER1_PRIVATE_KEY=0x... USER2_PRIVATE_KEY=0x... USER3_PRIVATE_KEY=0x... npx hardhat run scripts/deploy-frontend.js
-
 const { ethers } = require("hardhat");
 const fs = require("fs");
 const path = require("path");
@@ -123,9 +109,44 @@ async function main() {
   await pool.listMarket(usdc.address, irm.address, 1000);
   console.log('✅ 市场注册完成');
 
+  // ========== 给用户账户转账 ETH（用于支付 gas）==========
+  console.log('\n' + '─'.repeat(80));
+  console.log('💸 第二步：给用户账户转账 ETH（用于支付 gas）');
+  console.log('─'.repeat(80));
+
+  // 给每个用户转账 10 ETH 作为 gas 费用
+  const gasAmount = ethers.utils.parseEther('1');
+  
+  if (user1.address !== deployer.address) {
+    const tx1 = await deployer.sendTransaction({
+      to: user1.address,
+      value: gasAmount
+    });
+    await tx1.wait();
+    console.log('✅ 已给 User1 转账 1 ETH');
+  }
+  
+  if (user2.address !== deployer.address) {
+    const tx2 = await deployer.sendTransaction({
+      to: user2.address,
+      value: gasAmount
+    });
+    await tx2.wait();
+    console.log('✅ 已给 User2 转账 1 ETH');
+  }
+  
+  if (user3.address !== deployer.address) {
+    const tx3 = await deployer.sendTransaction({
+      to: user3.address,
+      value: gasAmount
+    });
+    await tx3.wait();
+    console.log('✅ 已给 User3 转账 1 ETH');
+  }
+
   // ========== 铸造代币 ==========
   console.log('\n' + '─'.repeat(80));
-  console.log('💰 第二步：铸造测试代币');
+  console.log('💰 第三步：铸造测试代币');
   console.log('─'.repeat(80));
 
   // Deployer: 流动性提供者
@@ -151,7 +172,7 @@ async function main() {
 
   // ========== 提供流动性 ==========
   console.log('\n' + '─'.repeat(80));
-  console.log('🏊 第三步：Deployer 提供流动性');
+  console.log('🏊 第四步：Deployer 提供流动性');
   console.log('─'.repeat(80));
   
   // 代币授权（等待交易确认）
@@ -180,7 +201,7 @@ async function main() {
 
   // ========== 创建初始借贷状态 ==========
   console.log('\n' + '─'.repeat(80));
-  console.log('💳 第四步：创建初始借贷状态（供前端演示）');
+  console.log('💳 第五步：创建初始借贷状态（供前端演示）');
   console.log('─'.repeat(80));
 
   // User1 存入抵押品并借款（健康状态）
@@ -213,7 +234,7 @@ async function main() {
 
   // ========== 生成前端配置 ==========
   console.log('\n' + '─'.repeat(80));
-  console.log('📝 第五步：生成前端配置文件');
+  console.log('📝 第六步：生成前端配置文件');
   console.log('─'.repeat(80));
 
   const config = {

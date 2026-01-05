@@ -1,186 +1,229 @@
-# Lending-Protocol
-模拟 Aave / Compound 的去中心化借贷协议
+# Lending Protocol
 
-> 使用 **Solidity + Hardhat + Ethers.js** 实现的去中心化借贷协议，支持多代币抵押与借贷，具备利率模型、抵押率管理、清算机制、安全防护和 Gas 优化等核心功能。  
-> 本项目旨在深入理解 DeFi 协议核心逻辑与链上风险控制机制。
+一个去中心化借贷协议，模拟 Aave/Compound 的核心功能，支持多代币抵押、动态利率和自动清算机制。
 
----
+## 📋 项目简介
 
-## 🚀 项目简介
+本项目是一个完整的去中心化借贷协议实现，包含智能合约、测试套件和前端界面。用户可以存入代币作为抵押品，借出其他代币，系统会根据资金利用率动态调整利率，并在抵押率不足时触发清算机制。
 
-本项目是一个 **Aave / Compound 风格的去中心化借贷协议模拟实现**，用户可以：
+## ✨ 功能特性
 
-- 存入多种 ERC20 代币作为抵押资产（Collateral）
-- 借出其他代币（Borrow）
-- 根据 **利率模型** 动态计算借款利率与存款利率
-- 自动维护 **抵押率 (Collateral Ratio)**，当低于阈值时可被清算
-- 实现 **清算机制 (Liquidation)**，保证系统健康运行
-- 支持多代币资产管理与账户健康度监控
+- **多代币支持**：支持 WETH、USDC 等多种 ERC20 代币
+- **动态利率模型**：根据资金利用率自动调整借款和存款利率
+- **抵押率管理**：每种代币可设置不同的 LTV（Loan-to-Value）和清算阈值
+- **自动清算**：当用户健康度低于阈值时，清算人可以清算并获得奖励
+- **利息累积**：实时计算和累积借款利息
+- **健康度监控**：实时计算和显示用户账户健康度
 
-该项目完整复刻了去中心化金融 (DeFi) 协议的核心逻辑，展示了如何在链上实现借贷、计息与风险控制。
-
----
-
-## 🧩 技术栈
+## 🛠️ 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| 智能合约 | Solidity (v0.8.28) |
+| 智能合约 | Solidity ^0.8.19 |
 | 开发框架 | Hardhat |
 | 测试框架 | Mocha + Chai |
-| 前端交互 | Ethers.js |
-| 区块链网络 | Ethereum (Hardhat local / Testnet) |
-
----
-
-## ⚙️ 功能特性
-
-### 🏦 1. 存款与借款
-- 用户可存入任意支持的 ERC20 代币。
-- 存入后获得对应的利息收益。
-- 借款需满足抵押率要求。
-
-### 📈 2. 利率模型（Interest Rate Model）
-- 动态利率算法，根据资金利用率 (Utilization Rate) 自动调整借款利率与存款利率。
-- 支持线性或阶梯利率模型。
-
-### 🧮 3. 抵押率管理（Collateral Management）
-- 每种代币设定不同的抵押率（如 ETH: 80%, DAI: 75%）。
-- 借款上限由抵押资产价值决定。
-
-### ⚖️ 4. 清算机制（Liquidation）
-- 当抵押率低于安全阈值（如 75%），可由其他用户发起清算。
-- 清算人获得部分奖励（Liquidation Bonus）。
-
-### 💎 5. 多代币支持
-- 支持多种 ERC20 资产，如 WETH、DAI、USDC 等。
-- 动态注册新代币市场。
-
-### 🛡️ 6. 安全与 Gas 优化
-- 使用 `ReentrancyGuard` 防重入攻击。
-- 避免不必要的存储读写与状态更新。
-- 使用 `unchecked` 优化数学计算。
-- 对关键函数加上权限与条件验证（modifier）。
-
----
+| 前端框架 | Next.js 15 + React |
+| Web3 库 | wagmi + viem |
+| 钱包连接 | ConnectKit |
 
 ## 📁 项目结构
+
 ```
-├── contracts
-│ ├── LendingPool.sol # 主借贷逻辑合约
-│ ├── InterestRateModel.sol # 利率计算模型
-│ ├── CollateralManager.sol # 抵押率与清算逻辑
-│ ├── TokenMock.sol # 测试代币 (ERC20)
-│ └── interfaces/ # 接口文件夹
+Lending-Protocol/
+├── contracts/              # 智能合约
+│   ├── LendingPool.sol           # 主借贷池合约
+│   ├── CollateralManager.sol      # 抵押品管理器
+│   ├── InterestRateModel.sol      # 利率模型
+│   ├── PriceOracleMock.sol        # 价格预言机（测试用）
+│   ├── ChainlinkPriceOracle.sol   # Chainlink 价格预言机
+│   ├── TokenMock.sol              # 测试代币
+│   └── interfaces/                # 接口定义
 │
-├── scripts
-│ ├── deploy.js # 部署脚本
+├── scripts/                # 部署脚本
+│   ├── deploy-frontend.js         # 前端演示数据部署
+│   └── quick-demo.js              # 快速演示脚本
 │
-├── test
-│ ├── lending.test.js # 借贷核心功能测试
-│ ├── liquidation.test.js # 清算机制测试
+├── test/                   # 测试文件
+│   ├── lending.test.js           # 借贷功能测试
+│   └── liquidation.test.js        # 清算功能测试
 │
-├── frontend/
-│ ├── index.html # 前端页面
-│ ├── app.js # 使用 Ethers.js 的交互逻辑
+├── frontend/               # 前端应用
+│   ├── app/                      # Next.js 页面
+│   ├── component/                 # React 组件
+│   ├── config/                   # 配置文件
+│   └── abi/                      # 合约 ABI
 │
-├── hardhat.config.js
-└── README.md
+├── hardhat.config.js       # Hardhat 配置
+└── README.md               # 项目说明
 ```
 
-## 🧪 部署与测试
+## 🚀 快速开始
 
-### 1️⃣ 安装依赖
+### 安装依赖
+
 ```bash
 npm install
 ```
 
-2️⃣ 编译合约
-```
+### 编译合约
+
+```bash
 npx hardhat compile
 ```
 
-3️⃣ 运行测试
-```
+### 运行测试
+
+```bash
 npx hardhat test
 ```
 
-4️⃣ 启动本地节点
-```
+### 部署合约
+
+```bash
+# 部署到本地网络（需要先启动节点）
 npx hardhat node
+npx hardhat run scripts/deploy-frontend.js --network localhost
+
+# 或使用 Hardhat 内置网络
+npx hardhat run scripts/deploy-frontend.js
 ```
 
-5️⃣ 部署到本地网络
-```
-npx hardhat run scripts/deploy.js --network localhost
-```
-6️⃣ 前端交互
+### 启动前端
 
-前端使用 Ethers.js 与合约交互，可通过：
-```
-npx hardhat node
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-并在浏览器中打开 frontend/index.html 查看 UI。
+## 📚 核心合约
 
+### LendingPool
 
-🧠 核心算法示例
+主借贷池合约，负责：
+- 存款和取款
+- 借款和还款
+- 利息累积（`_accrue`）
+- 清算执行
+- 健康度计算
 
-资金利用率计算
+### CollateralManager
+
+抵押品管理器，负责：
+- LTV（贷款价值比）管理
+- 清算阈值设置
+- 清算奖励配置
+- 抵押品价值计算
+
+### InterestRateModel
+
+利率模型，根据资金利用率计算动态利率：
 ```
-utilizationRate = totalBorrows * 1e18 / totalDeposits;
-```
-
-利率模型 (线性增长)
-```
-borrowRate = baseRate + utilizationRate * slope;
-```
-
-抵押率计算
-```
-collateralRatio = (collateralValue * 100) / borrowedValue;
-```
-
-清算条件
-```
-require(collateralRatio < liquidationThreshold, "Position healthy");
-```
-
-🔐 安全防护
-```
-✅ 防重入攻击：使用 ReentrancyGuard
-
-✅ 安全数学：SafeMath（Solidity 0.8+ 自动检测溢出）
-
-✅ 权限控制：onlyOwner 限制关键操作
-
-✅ 外部调用安全：防止闪电贷攻击与价格操纵
-
-✅ 测试覆盖：覆盖存款、借款、清算、边界条件等
+utilizationRate = totalBorrows / (totalSupply + totalBorrows)
+borrowRate = baseRate + utilizationRate * slope
 ```
 
-⛽ Gas 优化
-```
-合理使用 storage 与 memory
+## 🧠 DeFi 核心机制
 
-避免重复的状态读取
+### 资金利用率（Utilization Rate）
 
-合理打包事件日志
+资金利用率决定了利率的高低，利用率越高，借款利率越高：
 
-使用 unchecked 减少安全检查成本
-
-简化循环与映射访问
+```solidity
+utilizationRate = (totalBorrows * 1e18) / (totalSupply + totalBorrows)
 ```
 
-🌐 项目目标
-```
-该项目旨在帮助开发者理解：
+### 动态利率模型
 
-DeFi 借贷协议的 核心经济机制
+利率根据资金利用率动态调整，鼓励资金流动：
 
-如何在链上实现 动态利率与风险管理
-
-智能合约的 安全与优化实践
+```solidity
+borrowRate = baseRate + (utilizationRate * slope) / 1e18
 ```
 
-前端与 EVM 的 交互模式
+- **低利用率**：低利率，鼓励借款
+- **高利用率**：高利率，鼓励存款和还款
+
+### 抵押率与健康度
+
+**LTV (Loan-to-Value)**：贷款价值比，决定最大借款能力
+```
+借款能力 = 抵押品价值 × LTV
+```
+
+**健康度 (Health Factor)**：衡量账户安全性的指标
+```
+健康度 = (抵押品清算阈值价值 × 10000) / 总借款价值
+```
+
+- 健康度 > 100%：安全
+- 健康度 < 100%：可被清算
+
+### 清算机制
+
+当用户健康度低于 100% 时，清算人可以：
+1. 偿还部分借款（最多 50%，由 closeFactor 决定）
+2. 获得抵押品（包含 5% 清算奖励）
+3. 帮助用户恢复健康度
+
+清算公式：
+```
+清算奖励 = 偿还金额 × liquidationBonus / 10000
+获得抵押品 = (偿还金额 × liquidationBonus) / 抵押品价格
+```
+
+## 🎯 项目目标
+
+本项目旨在帮助开发者深入理解：
+
+- **DeFi 借贷协议的核心经济机制**：利率模型、资金利用率、抵押率管理
+- **链上风险控制**：如何通过健康度和清算机制保证系统安全
+- **智能合约安全实践**：重入保护、权限控制、输入验证
+- **前端与 EVM 交互**：使用 wagmi/viem 与智能合约交互的最佳实践
+
+## 🧪 测试
+
+项目包含完整的测试套件：
+
+```bash
+# 运行所有测试
+npx hardhat test
+
+# 运行特定测试文件
+npx hardhat test test/lending.test.js
+npx hardhat test test/liquidation.test.js
+```
+
+测试覆盖：
+- ✅ 市场注册
+- ✅ 存款和取款
+- ✅ 借款和还款
+- ✅ 健康度计算
+- ✅ 清算机制
+- ✅ 边界条件
+
+## 🔐 安全特性
+
+- **重入保护**：使用 `ReentrancyGuard` 防止重入攻击
+- **权限控制**：关键操作使用 `onlyOwner` 修饰符
+- **溢出保护**：Solidity 0.8+ 自动检测溢出
+- **输入验证**：所有用户输入都经过验证
+- **健康度检查**：防止不安全的操作
+- **价格验证**：防止价格操纵攻击
+
+## ⛽ Gas 优化
+
+- 合理使用 `storage` 与 `memory`
+- 避免重复的状态读取
+- 使用 `unchecked` 优化数学计算
+- 简化循环与映射访问
+- 合理打包事件日志
+
+## 📖 更多信息
+
+- 前端文档：查看 [frontend/README.md](./frontend/README.md)
+- 部署指南：运行 `npx hardhat run scripts/deploy-frontend.js` 查看部署说明
+
+## 📄 License
+
+ISC
