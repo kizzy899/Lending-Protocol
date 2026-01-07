@@ -1,0 +1,81 @@
+{
+  "network": {
+    "chainId": 31337,
+    "name": "unknown"
+  },
+  "contracts": {
+    "oracle": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "weth": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "usdc": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    "collateralManager": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "interestRateModel": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+    "lendingPool": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
+  },
+  "accounts": {
+    "deployer": {
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "privateKey": null,
+      "role": "管理员 & 流动性提供者"
+    },
+    "user1": {
+      "address": "0xbD5303b20383EC3024FaA6A549d791ab93033c47",
+      "privateKey": "91b251729679bb74a83008e823d01d03766fff595f6e7cf3434780e894cd11d3",
+      "role": "借款人"
+    },
+    "user2": {
+      "address": "0x76d4F1738DD704836A96A82B5CC2d64709d5fb54",
+      "privateKey": "2d7ebd27a011026c34fa565270ebcbaa1bd600a7587d3ff8b7a75e788a607747",
+      "role": "清算人"
+    },
+    "user3": {
+      "address": "0xb99111889560B60A94A34d44c0b64AAbF1E4c0dA",
+      "privateKey": "d2200e4aae938c90f9c885fe5ba691ce09e8b28a0b9cfd7062afc9aef3e6c4a3",
+      "role": "普通用户"
+    }
+  },
+  "tokens": {
+    "WETH": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "name": "Wrapped ETH",
+      "symbol": "WETH",
+      "decimals": 18,
+      "price": "2000",
+      "ltv": 80,
+      "liquidationThreshold": 85
+    },
+    "USDC": {
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "decimals": 6,
+      "price": "1",
+      "ltv": 90,
+      "liquidationThreshold": 93
+    }
+  },
+  "parameters": {
+    "closeFactor": 50,
+    "liquidationBonus": 5,
+    "reserveFactor": 10
+  },
+  "initialState": {
+    "liquidity": {
+      "WETH": "100",
+      "USDC": "80000"
+    },
+    "user1": {
+      "collateral": {
+        "WETH": "10"
+      },
+      "borrow": {
+        "USDC": "12000"
+      },
+      "healthFactor": "141.66"
+    },
+    "user3": {
+      "deposit": {
+        "WETH": "5"
+      }
+    }
+  }
+}

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity ^0.8.19;
 
-import "../interfaces/IPriceOracle.sol";
+import "./interfaces/IPriceOracle.sol";
+import "./interfaces/IERC20.sol";
 
 contract CollateralManager {
     // 代币 => 贷款价值比(LTV)，以1e4为基数（例如：8000 == 80.00%）
@@ -60,7 +61,14 @@ contract CollateralManager {
     /// @notice 计算给定代币数量的抵押品美元价值（18位小数）
     function collateralValueUSD(address token, uint256 amount) public view returns (uint256) {
         uint256 price = priceOracle.getPrice(token); // 1e18
-        return (price * amount) / 1e18;
+        // 需要获取代币的小数位数来计算正确的 USD 价值
+        // 注意：这里token 必须实现了 decimals() 方法
+        try IERC20(token).decimals() returns (uint8 decimals) {
+            return (price * amount) / (10 ** decimals);
+        } catch {
+            // 如果代币没有实现 decimals，假设是 18 位小数（向后兼容）
+            return (price * amount) / 1e18;
+        }
     }
 
     /// @notice 使用LTV计算给定代币数量的借款能力（美元）

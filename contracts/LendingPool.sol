@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity ^0.8.19;
 
-import "../interfaces/IERC20.sol";
-import "../interfaces/IInterestRateModel.sol";
-import "../interfaces/IPriceOracle.sol";
+import "./interfaces/IERC20.sol";
+import "./interfaces/IInterestRateModel.sol";
+import "./interfaces/IPriceOracle.sol";
 import "./CollateralManager.sol";
 
 /// @notice 最小化重入保护
 contract ReentrancyGuard {
+
     uint256 private _status;
     constructor() { _status = 1; }
+
     modifier nonReentrant() {
         require(_status == 1, "reentrant");
         _status = 2;
         _;
         _status = 1;
     }
+    
 }
 
 contract LendingPool is ReentrancyGuard {
@@ -35,6 +38,9 @@ contract LendingPool is ReentrancyGuard {
 
     // 代币 => 市场信息
     mapping(address => Market) public markets;
+    
+    // 已列出的代币列表（用于遍历）
+    address[] public listedTokens;
 
     // 代币 => 通过抵押品管理器获取价格
     CollateralManager public collateralManager;
@@ -71,6 +77,7 @@ contract LendingPool is ReentrancyGuard {
             interestModel: IInterestRateModel(interestModel),
             reserveFactor: reserveFactor
         });
+        listedTokens.push(token);
         emit MarketListed(token, interestModel, reserveFactor);
     }
 
@@ -117,8 +124,19 @@ contract LendingPool is ReentrancyGuard {
         uint256 totalBorrowedUSD = _getUserBorrowedUSD(msg.sender);
 
         // requested borrow in USD
+        // 注意：price 是 18 位小数，amount 是代币的原始单位
+        // 需要将 amount 转换为 18 位小数来计算 USD 价值
         uint256 price = priceOracle.getPrice(token); // 1e18
-        uint256 amountUSD = (price * amount) / 1e18;
+        uint8 decimals = IERC20(token).decimals();
+        // 将代币数量转换为 18 位小数：amount * 10^(18 - decimals)
+        uint256 amountUSD;
+        if (decimals <= 18) {
+            // 将代币数量转换为 18 位小数，然后乘以价格
+            amountUSD = (price * amount) / (10 ** decimals);
+        } else {
+            // 如果代币小数位数超过 18，这种情况很少见，但也要处理
+            amountUSD = (price * amount) / (10 ** decimals);
+        }
 
         require(totalBorrowedUSD + amountUSD <= borrowPowerUSD, "exceeds borrow power");
 
@@ -153,14 +171,16 @@ contract LendingPool is ReentrancyGuard {
     /// @notice 清算人为 `borrower` 偿还 `repayToken` 并获取 `seizeToken` 抵押品
     function liquidate(address borrower, address repayToken, address seizeToken, uint256 repayAmount) external nonReentrant {
         require(markets[repayToken].listed && markets[seizeToken].listed, "markets not listed");
+        require(repayAmount > 0, "zero");
         _accrue(repayToken);
         _accrue(seizeToken);
 
-        // borrower must be under liquidation threshold
-        require(!_isAccountHealthy(borrower), "not eligible");
-
+        // 先检查借款人是否有借款
         uint256 owe = borrowed[borrower][repayToken];
         require(owe > 0, "borrower owes nothing");
+
+        // borrower must be under liquidation threshold
+        require(!_isAccountHealthy(borrower), "not eligible");
 
         // max repayable = owe * closeFactor
         uint256 maxRepay = (owe * collateralManager.closeFactor()) / 10000;
@@ -170,8 +190,11 @@ contract LendingPool is ReentrancyGuard {
 
         // compute seize amount in tokens:
         // repay USD = pay * price(repayToken)
+        // 注意：priceRepay 是 18 位小数，pay 是代币的原始精度
+        // 需要除以代币的 decimals 来得到 18 位小数的 USD 价值
         uint256 priceRepay = priceOracle.getPrice(repayToken);
-        uint256 repayUSD = (priceRepay * pay) / 1e18;
+        uint8 repayDecimals = IERC20(repayToken).decimals();
+        uint256 repayUSD = (priceRepay * pay) / (10 ** repayDecimals);
 
         // seize USD needed: repayUSD * liquidationBonus / 1e4
         uint256 seizeUSD = (repayUSD * uint256(collateralManager.liquidationBonus())) / 10000;
@@ -221,7 +244,8 @@ contract LendingPool is ReentrancyGuard {
         uint256 interest = (m.totalBorrows * borrowRatePerSec * delta) / 1e18;
 
         // 计算储备金（按储备金率）
-        uint256 reserve = (interest * m.reserveFactor) / 10000;
+        // 注意：储备金保留在合约余额中，这里不单独记账
+        // uint256 reserve = (interest * m.reserveFactor) / 10000;
         // 将利息加到总借款中（储备金保留在合约中，这里只是将利息加到总借款中）
         m.totalBorrows += interest;
 
@@ -231,21 +255,47 @@ contract LendingPool is ReentrancyGuard {
 
     /// @notice 检查账户的总借款USD是否小于等于借款能力（抵押品价值USD * ltv的总和）
     function _isAccountHealthy(address account) internal view returns (bool) {
-        uint256 borrowedUSD = _getUserBorrowedUSD(account);
-        uint256 thresholdUSD = _getUserLiquidationThresholdUSD(account);
+        // 计算用户的总借款 USD
+        uint256 borrowedUSD = 0;
+        for (uint256 i = 0; i < listedTokens.length; ) {
+            address t = listedTokens[i];
+            uint256 amt = borrowed[account][t];
+            if (amt > 0) {
+                uint256 p = priceOracle.getPrice(t);
+                uint8 decimals = IERC20(t).decimals();
+                borrowedUSD += (p * amt) / (10 ** decimals);
+            }
+            unchecked { ++i; }
+        }
+        
+        // 计算用户的清算阈值 USD
+        uint256 thresholdUSD = 0;
+        for (uint256 i = 0; i < listedTokens.length; ) {
+            address t = listedTokens[i];
+            uint256 amt = supplied[account][t];
+            if (amt > 0) {
+                uint256 val = collateralManager.liquidationThresholdValue(t, amt);
+                thresholdUSD += val;
+            }
+            unchecked { ++i; }
+        }
+        
         // healthy when borrowedUSD <= thresholdUSD
         return borrowedUSD <= thresholdUSD;
     }
 
     function _getUserBorrowingPowerUSD(address account) internal view returns (uint256) {
-        // 对所有代币求和：抵押品价值USD * ltv
-        // 为了简单起见，没有实现通过外部列表遍历市场；我们要求调用者在测试中知道所有代币。
-        // 对于演示，我们假设只有一小部分代币；而是实现一个外部测试使用的辅助函数来计算。
-        // 这里我们通过扫描已知市场来计算用户存入>0的代币：（如果市场很多，gas成本会很高）
         uint256 total = 0;
-        // 简单扫描：（生产环境下效率不高）
-        // 警告：solidity无法遍历映射的键；在实际系统中需要维护一个已列出代币的数组
-        // 为了简单起见，通过外部辅助函数 getUserBorrowingPowerUSD 来传递代币列表
+        for (uint256 i = 0; i < listedTokens.length; ) {
+            address t = listedTokens[i];
+            uint256 amount = supplied[account][t];
+            if (amount > 0) {
+                uint256 val = collateralManager.collateralValueUSD(t, amount);
+                uint256 ltv = collateralManager.ltv(t);
+                total += (val * ltv) / 10000;
+            }
+            unchecked { ++i; }
+        }
         return total;
     }
 
@@ -266,8 +316,32 @@ contract LendingPool is ReentrancyGuard {
     }
 
     function _getUserBorrowedUSD(address account) internal view returns (uint256) {
-        // similar reason as above; we provide external version
-        return 0;
+        uint256 total = 0;
+        for (uint256 i = 0; i < listedTokens.length; ) {
+            address t = listedTokens[i];
+            uint256 amt = borrowed[account][t];
+            if (amt > 0) {
+                uint256 price = priceOracle.getPrice(t);
+                uint8 decimals = IERC20(t).decimals();
+                total += (price * amt) / (10 ** decimals);
+            }
+            unchecked { ++i; }
+        }
+        return total;
+    }
+
+    function _getUserLiquidationThresholdUSD(address account) internal view returns (uint256) {
+        uint256 total = 0;
+        for (uint256 i = 0; i < listedTokens.length; ) {
+            address t = listedTokens[i];
+            uint256 amt = supplied[account][t];
+            if (amt > 0) {
+                uint256 val = collateralManager.liquidationThresholdValue(t, amt);
+                total += val;
+            }
+            unchecked { ++i; }
+        }
+        return total;
     }
 
     function getUserBorrowedUSD(address account, address[] calldata tokens) external view returns (uint256) {
@@ -277,7 +351,8 @@ contract LendingPool is ReentrancyGuard {
             uint256 amt = borrowed[account][t];
             if (amt > 0) {
                 uint256 price = priceOracle.getPrice(t);
-                total += (price * amt) / 1e18;
+                uint8 decimals = IERC20(t).decimals();
+                total += (price * amt) / (10 ** decimals);
             }
             unchecked { ++i; }
         }

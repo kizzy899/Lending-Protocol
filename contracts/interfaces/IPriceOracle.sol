@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity ^0.8.19;
 
 // 获取资产的美元价格（USD），用于计算抵押品价值与健康度
 interface IPriceOracle {
